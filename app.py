@@ -16,7 +16,7 @@ def connectBD():
     db = mysql.connector.connect(
         host = "localhost",
         user = "root",
-        passwd = "claumestra",
+        passwd = "",
         database = "users"
     )
     return db
@@ -52,33 +52,62 @@ def initBD():
     return
 
 # checkUser: comprueba si el par usuario-contraseña existe en la BD
-def checkUser(user,password):
-    bd=connectBD()
-    cursor=bd.cursor()
+def checkUser(user, password):
+    bd = connectBD()
+    cursor = bd.cursor()
 
-    query=f"SELECT user,name,surname1,surname2,age,genre FROM users WHERE user='{user}'\
-            AND password='{password}'"
-    print(query)
-    cursor.execute(query)
+    query = "SELECT user, name, surname1, surname2, age, genre FROM users WHERE user = %s AND password = %s"
+    values = (user, password)
+    cursor.execute(query, values) 
+
     userData = cursor.fetchall()
     bd.close()
-    
-    if userData == []:
+
+    if not userData:
         return False
     else:
         return userData[0]
 
+
 # cresteUser: crea un nuevo usuario en la BD
-def createUser(user,password,name,surname1,surname2,age,genre):
-    
-    return
+def createUser(user, password, name, surname1, surname2, age, salary):
+    bd = connectBD()  
+    cursor = bd.cursor() 
+
+    # Consulta SQL para insertar un nuevo usuario con nombres de campo en español
+    query = """INSERT INTO users (user, password, name, surname1, surname2, age, salary)
+               VALUES (%s, %s, %s, %s, %s, %s, %s)"""
+    values = (user, password, name, surname1, surname2, age, salary)
+    cursor.execute(query, values) 
+
+    bd.commit()  
+    cursor.close()  
+    bd.close()
+
 
 # Secuencia principal: configuración de la aplicación web ##########################################
 # Instanciación de la aplicación web Flask
 app = Flask(__name__)
 
+@app.route("/newUser", methods=["POST"])
+def newUser():
+    # Obtener datos del formulario
+    user = request.form["usuario"]
+    password = request.form["contrasena"]
+    name = request.form["nombre"]
+    surname1 = request.form["apellido1"]
+    surname2 = request.form["apellido2"]
+    age = int(request.form["edad"])
+    salary = float(request.form["salario"])
+
+    # Crear el usuario en la base de datos
+    createUser(user, password, name, surname1, surname2, age, salary)
+
+    return "Usuario registrado exitosamente."
+
 # Declaración de rutas de la aplicación web
 @app.route("/")
+
 def home():
     return render_template("home.html")
 
@@ -89,7 +118,7 @@ def login():
 
 @app.route("/signin")
 def signin():
-    return "SIGN IN PAGE"
+    return render_template("signin.html")
 
 @app.route("/results",methods=('GET', 'POST'))
 def results():
